@@ -3,4 +3,4 @@ opencv-python
 numpy
 gunicorn
 Flask==2.2.5
-requests~=2.31
+requests~=2.31.0
