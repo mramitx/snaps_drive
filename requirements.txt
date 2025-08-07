@@ -1,6 +1,5 @@
-flask~=3.1.1
+Flask==2.2.5
 opencv-python
 numpy
 gunicorn
-Flask==2.2.5
 requests~=2.31.0
